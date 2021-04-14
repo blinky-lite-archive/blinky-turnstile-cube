@@ -1,1 +1,1 @@
-# blinky-wind-cube
+# blinky-DS18B20-cube
