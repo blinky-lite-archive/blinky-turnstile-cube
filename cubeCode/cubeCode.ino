@@ -110,6 +110,13 @@ void processNewSetting(TransmitData* tData, ReceiveData* rData, ReceiveData* new
 }
 boolean processData(TransmitData* tData, ReceiveData* rData)
 {
+  digitalWrite(dS18B20_A.powerPin, LOW); 
+  digitalWrite(dS18B20_B.powerPin, LOW); 
+  delay(500);
+  digitalWrite(dS18B20_A.powerPin, HIGH); 
+  digitalWrite(dS18B20_B.powerPin, HIGH); 
+  delay(500);  
+
   dS18B20_A.temp = getDS18B20Temperature(&dS18B20_A.oneWire, dS18B20_A.address, dS18B20_A.chipType);
   dS18B20_B.temp = getDS18B20Temperature(&dS18B20_B.oneWire, dS18B20_B.address, dS18B20_B.chipType);
 //  Serial.print(dS18B20_A.temp);
