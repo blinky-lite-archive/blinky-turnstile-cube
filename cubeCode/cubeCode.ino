@@ -1,107 +1,30 @@
-#include <OneWire.h>
 #define BAUD_RATE 57600
 #define CHECKSUM 64
+const int bar1Pin = 3;
+const int bar2Pin = 5;
+const int bar3Pin = 7;
+const int bar4Pin = 9;
 
 struct TransmitData
 {
-  float tempA = 0.0;
-  float tempB = 0.0;
-  byte extraInfo[44];
+  int bar1Val = 0;
+  int bar2Val = 0;
+  int bar3Val = 0;
+  int bar4Val = 0;
+  byte extraInfo[36];
 };
 struct ReceiveData
 {
-  int loopDelay = 100;
+  int loopDelay = 1000;
   byte extraInfo[52];
 };
 
-struct DS18B20
-{
-  int signalPin;
-  int powerPin;
-  byte chipType;
-  byte address[8];
-  OneWire oneWire;
-  float temp = 0.0;
-};
-DS18B20 dS18B20_A;
-DS18B20 dS18B20_B;
-
-byte initDS18B20(byte* addr, OneWire* ow)
-{
-  byte type_s = 0;
-  if ( !ow->search(addr)) 
-  {
-    ow->reset_search();
-    delay(250);
-    return 0;
-  }
-   
-  // the first ROM byte indicates which chip
-  switch (addr[0]) 
-  {
-    case 0x10:
-      type_s = 1;
-      break;
-    case 0x28:
-      type_s = 0;
-      break;
-    case 0x22:
-      type_s = 0;
-      break;
-    default:
-      return 0;
-  } 
-  return type_s;
-}
-
-float getDS18B20Temperature(OneWire* ow, byte* addr, byte chipType)
-{
-  byte i;
-  byte data[12];
-  float celsius;
-  ow->reset();
-  ow->select(addr);
-  ow->write(0x44, 1);        // start conversion, with parasite power on at the end
-  
-  delay(750);     // maybe 750ms is enough, maybe not
-  
-  ow->reset();
-  ow->select(addr);    
-  ow->write(0xBE);         // Read Scratchpad
-
-  for ( i = 0; i < 9; i++) data[i] = ow->read();
-  int16_t raw = (data[1] << 8) | data[0];
-  if (chipType) 
-  {
-    raw = raw << 3; // 9 bit resolution default
-    if (data[7] == 0x10)  raw = (raw & 0xFFF0) + 12 - data[6];
-  }
-  else 
-  {
-    byte cfg = (data[4] & 0x60);
-    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
-    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
-    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-  }
-  celsius = (float)raw / 16.0;
-  return celsius;
-  
-}
-
 void setupPins(TransmitData* tData, ReceiveData* rData)
 {
-  dS18B20_A.signalPin = 5;
-  dS18B20_A.powerPin = 3;
-  dS18B20_B.signalPin = 9;
-  dS18B20_B.powerPin = 7;
-  pinMode(dS18B20_A.powerPin, OUTPUT);
-  digitalWrite(dS18B20_A.powerPin, HIGH);    
-  pinMode(dS18B20_B.powerPin, OUTPUT);
-  digitalWrite(dS18B20_B.powerPin, HIGH);    
-  dS18B20_A.oneWire = OneWire(dS18B20_A.signalPin);
-  dS18B20_A.chipType = initDS18B20(dS18B20_A.address, &dS18B20_A.oneWire);
-  dS18B20_B.oneWire = OneWire(dS18B20_B.signalPin);
-  dS18B20_B.chipType = initDS18B20(dS18B20_B.address, &dS18B20_B.oneWire);
+  pinMode(bar1Pin, INPUT);
+  pinMode(bar2Pin, INPUT);
+  pinMode(bar3Pin, INPUT);
+  pinMode(bar4Pin, INPUT);
 //  Serial.begin(9600);
 }
 void processNewSetting(TransmitData* tData, ReceiveData* rData, ReceiveData* newData)
@@ -110,21 +33,19 @@ void processNewSetting(TransmitData* tData, ReceiveData* rData, ReceiveData* new
 }
 boolean processData(TransmitData* tData, ReceiveData* rData)
 {
-  digitalWrite(dS18B20_A.powerPin, LOW); 
-  digitalWrite(dS18B20_B.powerPin, LOW); 
-  delay(500);
-  digitalWrite(dS18B20_A.powerPin, HIGH); 
-  digitalWrite(dS18B20_B.powerPin, HIGH); 
-  delay(500);  
-
-  dS18B20_A.temp = getDS18B20Temperature(&dS18B20_A.oneWire, dS18B20_A.address, dS18B20_A.chipType);
-  dS18B20_B.temp = getDS18B20Temperature(&dS18B20_B.oneWire, dS18B20_B.address, dS18B20_B.chipType);
-//  Serial.print(dS18B20_A.temp);
-//  Serial.print(",");
-//  Serial.println(dS18B20_B.temp);
-
-  tData->tempA = dS18B20_A.temp;
-  tData->tempB = dS18B20_B.temp;
+  tData->bar1Val = digitalRead(bar1Pin);
+  tData->bar2Val = digitalRead(bar2Pin);
+  tData->bar3Val = digitalRead(bar3Pin);
+  tData->bar4Val = digitalRead(bar4Pin);
+/*
+  Serial.print(tData->bar1Val);
+  Serial.print(", ");
+  Serial.print(tData->bar2Val);
+  Serial.print(", ");
+  Serial.print(tData->bar3Val);
+  Serial.print(", ");
+  Serial.println(tData->bar4Val);
+*/
   delay(rData->loopDelay);
   return true;
 }
